@@ -10,17 +10,23 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
-# Remove status line config
+# Restore original status line config
 SETTINGS="$HOME/.claude/settings.json"
+BACKUP="/tmp/claude-selector/original-statusline.json"
 python3 -c "
 import json, os
 path = os.path.expanduser('$SETTINGS')
+backup_path = '$BACKUP'
 try:
     with open(path) as f: settings = json.load(f)
 except: exit()
-if 'statusLine' in settings:
+if os.path.exists(backup_path):
+    with open(backup_path) as f: original = json.load(f)
+    settings['statusLine'] = original
+    os.remove(backup_path)
+elif 'statusLine' in settings:
     del settings['statusLine']
-    with open(path, 'w') as f: json.dump(settings, f, indent=2)
+with open(path, 'w') as f: json.dump(settings, f, indent=2)
 " 2>/dev/null
 
 exit 0

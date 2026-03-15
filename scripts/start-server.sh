@@ -34,15 +34,21 @@ echo $! > "$PID_FILE"
 # Wait for server to be ready
 for i in $(seq 1 10); do
   if curl -s --max-time 1 http://localhost:7890/health >/dev/null 2>&1; then
-    # Configure status line
+    # Configure status line (backup existing first)
     SETTINGS="$HOME/.claude/settings.json"
     STATUSLINE_CMD="${PLUGIN_ROOT}/scripts/statusline.sh"
+    BACKUP="/tmp/claude-selector/original-statusline.json"
     python3 -c "
 import json, os
 path = os.path.expanduser('$SETTINGS')
+backup_path = '$BACKUP'
 try:
     with open(path) as f: settings = json.load(f)
 except: settings = {}
+# Backup existing statusLine if present and not already ours
+existing = settings.get('statusLine')
+if existing and existing.get('command', '') != '$STATUSLINE_CMD':
+    with open(backup_path, 'w') as f: json.dump(existing, f, indent=2)
 settings['statusLine'] = {'type': 'command', 'command': '$STATUSLINE_CMD'}
 os.makedirs(os.path.dirname(path), exist_ok=True)
 with open(path, 'w') as f: json.dump(settings, f, indent=2)
