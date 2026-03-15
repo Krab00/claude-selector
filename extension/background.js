@@ -1,3 +1,12 @@
+const MAX_LOGS = 200;
+
+async function addLog(type, msg) {
+  const { selectorLogs = [] } = await chrome.storage.local.get({ selectorLogs: [] });
+  selectorLogs.push({ ts: Date.now(), type, msg });
+  if (selectorLogs.length > MAX_LOGS) selectorLogs.splice(0, selectorLogs.length - MAX_LOGS);
+  await chrome.storage.local.set({ selectorLogs });
+}
+
 // Ensure content script and CSS are injected into the tab
 async function ensureContentScript(tabId) {
   try {
@@ -53,6 +62,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg.type === 'checkServerHealth') {
     handleHealthCheck(msg.serverUrl).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'addLog') {
+    addLog(msg.logType, msg.msg);
+    sendResponse({ ok: true });
     return true;
   }
 });
@@ -116,21 +130,22 @@ async function handleSendToServer(payload) {
       serverUrl: 'http://localhost:7890',
     });
     const url = `${settings.serverUrl}/elements`;
-    console.log('[Claude Selector] POST', url, payload.elements?.length, 'element(s)');
+    const n = payload.elements?.length ?? 0;
+    addLog('send', `Sending ${n} element(s) to ${url}`);
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     if (!resp.ok) {
-      console.error('[Claude Selector] Server returned', resp.status);
+      addLog('error', `Server returned ${resp.status}`);
       return { error: `Server returned ${resp.status}` };
     }
     const data = await resp.json();
-    console.log('[Claude Selector] Sent OK:', data);
+    addLog('send', `OK — ${n} element(s) delivered (total stored: ${data.count})`);
     return { ok: true, data };
   } catch (err) {
-    console.error('[Claude Selector] Send failed:', err.message);
+    addLog('error', `Send failed: ${err.message}`);
     return { error: err.message };
   }
 }
@@ -139,8 +154,10 @@ async function handleHealthCheck(serverUrl) {
   try {
     const url = serverUrl || (await chrome.storage.sync.get({ serverUrl: 'http://localhost:7890' })).serverUrl;
     const resp = await fetch(`${url}/health`, { method: 'GET', signal: AbortSignal.timeout(3000) });
+    addLog('info', `Server health: ${resp.ok ? 'online' : 'offline'}`);
     return { ok: resp.ok };
   } catch {
+    addLog('info', 'Server health: offline');
     return { ok: false };
   }
 }

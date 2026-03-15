@@ -4,6 +4,7 @@
   window.__claudeSelectorInjected = true;
 
   const log = (...args) => console.log('[Claude Selector]', ...args);
+  const addLog = (type, msg) => chrome.runtime.sendMessage({ type: 'addLog', logType: type, msg }).catch(() => {});
 
   let selectionMode = false;
   let selectedElements = [];
@@ -41,6 +42,7 @@
   function toggleSelectionMode(forceState) {
     selectionMode = forceState !== undefined ? forceState : !selectionMode;
     log('Selection mode:', selectionMode ? 'ON' : 'OFF');
+    addLog('info', `Selection mode: ${selectionMode ? 'ON' : 'OFF'}`);
     if (selectionMode) {
       document.body.classList.add('claude-selector-active');
       document.addEventListener('mouseover', onMouseOver, true);
@@ -151,7 +153,7 @@
       elements: data,
       timestamp: new Date().toISOString(),
     };
-    log('Sending', data.length, 'element(s) to server...');
+    addLog('info', `Preparing ${data.length} element(s) to send...`);
     try {
       const resp = await chrome.runtime.sendMessage({ type: 'sendToServer', payload });
       if (resp?.ok) {
@@ -197,6 +199,7 @@
     el.classList.remove('claude-selector-hover');
     el.classList.add('claude-selector-selected');
     selectedElements.push(el);
+    addLog('select', `Selected: ${getUniqueSelector(el)}`);
   }
 
   function deselectElement(el, idx) {

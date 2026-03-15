@@ -204,6 +204,10 @@ autoSendBtn.addEventListener('click', async () => {
   updateAutoSend(newVal);
 });
 
+document.getElementById('logsLink').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('logs/logs.html') });
+});
+
 settingsLink.addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
 });
