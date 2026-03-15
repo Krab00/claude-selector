@@ -1,7 +1,7 @@
 {
   "name": "claude-selector",
   "description": "Select elements on web pages and send their CSS selectors and HTML to Claude Code",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "krzysiek"
   },
