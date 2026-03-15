@@ -75,19 +75,23 @@ document.getElementById('changeShortcutBtn').addEventListener('click', () => {
 // --- Keybinding editor ---
 
 const defaultBindings = {
-  copy: { key: 'c', meta: true, shift: false, alt: false },
-  exit: { key: 'Escape', meta: false, shift: false, alt: false },
+  copy: { key: 'c', meta: true, shift: false, alt: false, ctrl: false },
+  send: { key: 'e', meta: true, shift: false, alt: false, ctrl: true },
+  exit: { key: 'Escape', meta: false, shift: false, alt: false, ctrl: false },
 };
 
 let currentBindings = { ...defaultBindings };
 const keyCopyInput = document.getElementById('keyCopy');
+const keySendInput = document.getElementById('keySend');
 const keyExitInput = document.getElementById('keyExit');
 
 function formatBinding(b) {
+  const isMac = navigator.platform.includes('Mac');
   const parts = [];
-  if (b.meta) parts.push(navigator.platform.includes('Mac') ? '⌘' : 'Ctrl');
+  if (b.ctrl) parts.push(isMac ? '⌃' : 'Ctrl');
+  if (b.meta) parts.push(isMac ? '⌘' : 'Meta');
   if (b.shift) parts.push('Shift');
-  if (b.alt) parts.push('Alt');
+  if (b.alt) parts.push(isMac ? '⌥' : 'Alt');
   parts.push(b.key === ' ' ? 'Space' : b.key);
   return parts.join('+');
 }
@@ -96,6 +100,7 @@ function loadBindings() {
   chrome.storage.sync.get({ keybindings: null }, (s) => {
     if (s.keybindings) currentBindings = s.keybindings;
     keyCopyInput.value = formatBinding(currentBindings.copy);
+    keySendInput.value = formatBinding(currentBindings.send);
     keyExitInput.value = formatBinding(currentBindings.exit);
   });
 }
@@ -111,7 +116,8 @@ function recordKey(inputEl, bindingName) {
 
     const binding = {
       key: e.key,
-      meta: e.metaKey || e.ctrlKey,
+      meta: e.metaKey,
+      ctrl: e.ctrlKey,
       shift: e.shiftKey,
       alt: e.altKey,
     };
@@ -127,6 +133,7 @@ function recordKey(inputEl, bindingName) {
 }
 
 document.getElementById('recordCopy').addEventListener('click', () => recordKey(keyCopyInput, 'copy'));
+document.getElementById('recordSend').addEventListener('click', () => recordKey(keySendInput, 'send'));
 document.getElementById('recordExit').addEventListener('click', () => recordKey(keyExitInput, 'exit'));
 
 loadBindings();

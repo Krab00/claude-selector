@@ -11,19 +11,26 @@
   let keybindings = {
     copy: { key: 'c', meta: true },
     exit: { key: 'Escape', meta: false },
+    send: { key: 'e', meta: true, ctrl: true },
   };
+  let autoSendOnExit = false;
 
   // Load custom keybindings
-  chrome.storage.sync.get({ keybindings: null }, (settings) => {
+  chrome.storage.sync.get({ keybindings: null, autoSendOnExit: false }, (settings) => {
     if (settings.keybindings) keybindings = settings.keybindings;
+    autoSendOnExit = settings.autoSendOnExit;
   });
   chrome.storage.onChanged.addListener((changes) => {
     if (changes.keybindings?.newValue) keybindings = changes.keybindings.newValue;
+    if (changes.autoSendOnExit?.newValue !== undefined) autoSendOnExit = changes.autoSendOnExit.newValue;
   });
 
   function matchesBinding(e, binding) {
     if (e.key !== binding.key) return false;
-    if (binding.meta && !(e.metaKey || e.ctrlKey)) return false;
+    if (binding.meta && !e.metaKey) return false;
+    if (binding.ctrl && !e.ctrlKey) return false;
+    // If binding uses meta but not ctrl, also accept ctrlKey on non-Mac
+    if (binding.meta && !binding.ctrl && !e.metaKey && !e.ctrlKey) return false;
     if (binding.shift && !e.shiftKey) return false;
     if (binding.alt && !e.altKey) return false;
     return true;
@@ -103,6 +110,9 @@
 
   function onKeyDown(e) {
     if (matchesBinding(e, keybindings.exit)) {
+      if (autoSendOnExit && selectedElements.length > 0) {
+        sendToServer();
+      }
       clearSelection();
       toggleSelectionMode(false);
     }
@@ -110,6 +120,25 @@
       e.preventDefault();
       e.stopPropagation();
       copyWithScreenshots();
+    }
+    if (matchesBinding(e, keybindings.send) && selectedElements.length > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      sendToServer();
+    }
+  }
+
+  async function sendToServer() {
+    const data = collectElementData({});
+    const payload = {
+      source: { url: location.href, title: document.title },
+      elements: data,
+      timestamp: new Date().toISOString(),
+    };
+    try {
+      await chrome.runtime.sendMessage({ type: 'sendToServer', payload });
+    } catch {
+      // server might be offline
     }
   }
 

@@ -4,6 +4,7 @@ const sendBtn = document.getElementById('sendBtn');
 const copyBtn = document.getElementById('copyBtn');
 const clearBtn = document.getElementById('clearBtn');
 const serverStatus = document.getElementById('serverStatus');
+const autoSendBtn = document.getElementById('autoSendBtn');
 const settingsLink = document.getElementById('settingsLink');
 const toast = document.getElementById('toast');
 
@@ -34,6 +35,11 @@ async function init() {
   const tab = await getActiveTab();
   if (!tab?.id) return;
   activeTabId = tab.id;
+
+  // Load auto-send state
+  chrome.storage.sync.get({ autoSendOnExit: false }, (s) => {
+    updateAutoSend(s.autoSendOnExit);
+  });
 
   // Check server health
   chrome.runtime.sendMessage({ type: 'checkServerHealth' }, (resp) => {
@@ -179,6 +185,23 @@ clearBtn.addEventListener('click', async () => {
   } catch {
     showToast('Failed to clear');
   }
+});
+
+function updateAutoSend(active) {
+  if (active) {
+    autoSendBtn.textContent = 'ON';
+    autoSendBtn.classList.add('active');
+  } else {
+    autoSendBtn.textContent = 'OFF';
+    autoSendBtn.classList.remove('active');
+  }
+}
+
+autoSendBtn.addEventListener('click', async () => {
+  const s = await chrome.storage.sync.get({ autoSendOnExit: false });
+  const newVal = !s.autoSendOnExit;
+  await chrome.storage.sync.set({ autoSendOnExit: newVal });
+  updateAutoSend(newVal);
 });
 
 settingsLink.addEventListener('click', () => {
