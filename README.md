@@ -7,7 +7,7 @@ A Chrome extension + Claude Code plugin that lets you select elements on a web p
 ### 1. Install the Claude Code plugin
 
 ```bash
-claude plugin add --git https://github.com/user/claude-selector
+claude plugin add --git https://github.com/Krab00/claude-selector
 ```
 
 This automatically:
