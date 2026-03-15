@@ -5,19 +5,27 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
 SERVER_DIR="${PLUGIN_ROOT}/server"
 PID_FILE="/tmp/claude-selector/server.pid"
 LOG_FILE="/tmp/claude-selector/server.log"
+SESSION_FILE="/tmp/claude-selector/session-id"
 
 mkdir -p /tmp/claude-selector
+
+# Generate session ID
+SESSION_ID="s_$$_$(date +%s)"
+echo "$SESSION_ID" > "$SESSION_FILE"
 
 # Check if server is already running
 if [ -f "$PID_FILE" ]; then
   OLD_PID=$(cat "$PID_FILE")
   if kill -0 "$OLD_PID" 2>/dev/null; then
+    # Server running — just register session
+    curl -s -X POST "http://localhost:7890/sessions/register?id=${SESSION_ID}" >/dev/null 2>&1
     exit 0
   fi
 fi
 
 # Also check via health endpoint
 if curl -s --max-time 1 http://localhost:7890/health >/dev/null 2>&1; then
+  curl -s -X POST "http://localhost:7890/sessions/register?id=${SESSION_ID}" >/dev/null 2>&1
   exit 0
 fi
 
@@ -34,6 +42,9 @@ echo $! > "$PID_FILE"
 # Wait for server to be ready
 for i in $(seq 1 10); do
   if curl -s --max-time 1 http://localhost:7890/health >/dev/null 2>&1; then
+    # Register session
+    curl -s -X POST "http://localhost:7890/sessions/register?id=${SESSION_ID}" >/dev/null 2>&1
+
     # Configure status line (backup existing first)
     SETTINGS="$HOME/.claude/settings.json"
     STATUSLINE_CMD="${PLUGIN_ROOT}/scripts/statusline.sh"
@@ -45,7 +56,6 @@ backup_path = '$BACKUP'
 try:
     with open(path) as f: settings = json.load(f)
 except: settings = {}
-# Backup existing statusLine if present and not already ours
 existing = settings.get('statusLine')
 if existing and existing.get('command', '') != '$STATUSLINE_CMD':
     with open(backup_path, 'w') as f: json.dump(existing, f, indent=2)

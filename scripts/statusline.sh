@@ -3,6 +3,7 @@
 # Claude Code sends JSON on stdin — capture it for the original statusline
 INPUT=$(cat)
 
+SESSION_FILE="/tmp/claude-selector/session-id"
 BACKUP="/tmp/claude-selector/original-statusline.json"
 ORIGINAL_OUTPUT=""
 
@@ -12,7 +13,6 @@ if [ -f "$BACKUP" ]; then
   if [ "$ORIG_TYPE" = "command" ]; then
     ORIG_CMD=$(python3 -c "import json; d=json.load(open('$BACKUP')); print(d.get('command',''))" 2>/dev/null)
     if [ -n "$ORIG_CMD" ]; then
-      # Expand ~ in command path
       ORIG_CMD="${ORIG_CMD/#\~/$HOME}"
       ORIGINAL_OUTPUT=$(echo "$INPUT" | bash -c "$ORIG_CMD" 2>/dev/null || true)
     fi
@@ -21,15 +21,14 @@ if [ -f "$BACKUP" ]; then
   fi
 fi
 
-# Get claude-selector indicator
+# Get session-aware claude-selector indicator
 SELECTOR_OUTPUT=""
-RESP=$(curl -s --max-time 1 http://localhost:7890/health 2>/dev/null)
-if [ -n "$RESP" ]; then
-  if command -v jq >/dev/null 2>&1; then
-    SELECTOR_OUTPUT=$(echo "$RESP" | jq -r 'if .stored > 0 then "📎 web elements" else "" end')
-  else
-    STORED=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stored',0))" 2>/dev/null || echo "0")
-    if [ "$STORED" -gt 0 ] 2>/dev/null; then
+if [ -f "$SESSION_FILE" ]; then
+  SESSION_ID=$(cat "$SESSION_FILE")
+  RESP=$(curl -s --max-time 0.5 "http://localhost:7890/health?session=${SESSION_ID}" 2>/dev/null)
+  if [ -n "$RESP" ]; then
+    UNCONSUMED=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('unconsumed',False))" 2>/dev/null || echo "False")
+    if [ "$UNCONSUMED" = "True" ]; then
       SELECTOR_OUTPUT="📎 web elements"
     fi
   fi

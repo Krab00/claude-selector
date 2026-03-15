@@ -35,7 +35,7 @@ PID file: `/tmp/claude-selector/server.pid`
 
 ## `/ai-service clear` — Clear captured elements
 
-1. Run `curl -s -X DELETE http://localhost:7890/elements`
+1. Run `curl -s -X DELETE http://localhost:7890/elements/all`
 2. Confirm that elements have been cleared
 
 ## `/ai-service read` — Read latest captured elements

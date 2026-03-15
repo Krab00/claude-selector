@@ -24,12 +24,17 @@ export interface Payload {
 
 export class Store {
   private payloads: Payload[] = [];
+  private sessions = new Set<string>();
+  private consumedBy = new Set<string>();
+  private payloadVersion = 0;
 
   async add(payload: Payload): Promise<number> {
     this.payloads.push(payload);
     if (this.payloads.length > MAX_PAYLOADS) {
       this.payloads = this.payloads.slice(-MAX_PAYLOADS);
     }
+    this.payloadVersion++;
+    this.consumedBy.clear();
     await this.persist();
     return this.payloads.length;
   }
@@ -42,15 +47,63 @@ export class Store {
     return this.payloads.at(-1);
   }
 
-  async clear(): Promise<void> {
+  getLatestForSession(sessionId: string): Payload | undefined {
+    if (this.consumedBy.has(sessionId)) return undefined;
+    return this.getLatest();
+  }
+
+  hasUnconsumedForSession(sessionId: string): boolean {
+    if (this.payloads.length === 0) return false;
+    return !this.consumedBy.has(sessionId);
+  }
+
+  consume(sessionId: string): void {
+    this.consumedBy.add(sessionId);
+    this.autoCleanup();
+  }
+
+  registerSession(sessionId: string): void {
+    this.sessions.add(sessionId);
+  }
+
+  unregisterSession(sessionId: string): void {
+    this.sessions.delete(sessionId);
+    this.consumedBy.delete(sessionId);
+    this.autoCleanup();
+  }
+
+  getSessionCount(): number {
+    return this.sessions.size;
+  }
+
+  private autoCleanup(): void {
+    if (this.payloads.length === 0) return;
+    if (this.sessions.size === 0) return;
+    // If all registered sessions have consumed, clear everything
+    for (const s of this.sessions) {
+      if (!this.consumedBy.has(s)) return;
+    }
     this.payloads = [];
+    this.consumedBy.clear();
+    try {
+      if (existsSync(PERSIST_PATH)) {
+        unlink(PERSIST_PATH).catch(() => {});
+      }
+    } catch {}
+  }
+
+  async clearAll(): Promise<void> {
+    this.payloads = [];
+    this.consumedBy.clear();
     try {
       if (existsSync(PERSIST_PATH)) {
         await unlink(PERSIST_PATH);
       }
-    } catch {
-      // ignore if file doesn't exist
-    }
+    } catch {}
+  }
+
+  async clear(): Promise<void> {
+    await this.clearAll();
   }
 
   private async persist(): Promise<void> {

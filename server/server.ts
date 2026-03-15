@@ -58,29 +58,65 @@ export class Server {
   private async handleRequest(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const origin = req.headers.get("origin");
+    const sessionId = url.searchParams.get("session") || "";
 
     if (req.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
 
+    // Health check — session-aware
     if (url.pathname === "/health" && req.method === "GET") {
+      const hasUnconsumed = sessionId
+        ? this.store.hasUnconsumedForSession(sessionId)
+        : this.store.getAll().length > 0;
       return json(
         {
           status: "ok",
           uptime: Math.floor((Date.now() - this.startTime) / 1000),
           stored: this.store.getAll().length,
+          unconsumed: hasUnconsumed,
+          sessions: this.store.getSessionCount(),
         },
         200,
         origin,
       );
     }
 
+    // Session management
+    if (url.pathname === "/sessions/register" && req.method === "POST") {
+      const id = url.searchParams.get("id");
+      if (!id) return json({ error: "Missing id parameter" }, 400, origin);
+      this.store.registerSession(id);
+      return json({ ok: true, session: id }, 200, origin);
+    }
+
+    if (url.pathname.startsWith("/sessions/") && req.method === "DELETE") {
+      const id = url.pathname.split("/sessions/")[1];
+      if (!id) return json({ error: "Missing session id" }, 400, origin);
+      this.store.unregisterSession(id);
+      return json({ ok: true }, 200, origin);
+    }
+
+    // Elements — session-aware
     if (url.pathname === "/elements/latest" && req.method === "GET") {
-      const latest = this.store.getLatest();
+      const latest = sessionId
+        ? this.store.getLatestForSession(sessionId)
+        : this.store.getLatest();
       if (!latest) {
         return json({ error: "No payloads stored" }, 404, origin);
       }
       return json(latest, 200, origin);
+    }
+
+    if (url.pathname === "/elements/consume" && req.method === "POST") {
+      if (!sessionId) return json({ error: "Missing session parameter" }, 400, origin);
+      this.store.consume(sessionId);
+      return json({ ok: true }, 200, origin);
+    }
+
+    if (url.pathname === "/elements/all" && req.method === "DELETE") {
+      await this.store.clearAll();
+      return json({ status: "cleared" }, 200, origin);
     }
 
     if (url.pathname === "/elements") {
@@ -95,7 +131,7 @@ export class Server {
         return json(this.store.getAll(), 200, origin);
       }
       if (req.method === "DELETE") {
-        await this.store.clear();
+        await this.store.clearAll();
         return json({ status: "cleared" }, 200, origin);
       }
     }

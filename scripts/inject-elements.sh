@@ -1,27 +1,25 @@
 #!/bin/bash
 
+SESSION_FILE="/tmp/claude-selector/session-id"
 LATEST="/tmp/claude-selector/latest.json"
-SEEN="/tmp/claude-selector/last_seen"
 
-# No file, nothing to inject
-[ -f "$LATEST" ] || exit 0
+# Need session ID
+[ -f "$SESSION_FILE" ] || exit 0
+SESSION_ID=$(cat "$SESSION_FILE")
 
-# Check if file was modified since last seen
-if [ -f "$SEEN" ]; then
-  LATEST_MOD=$(stat -f %m "$LATEST" 2>/dev/null || stat -c %Y "$LATEST" 2>/dev/null)
-  SEEN_MOD=$(cat "$SEEN")
-  [ "$LATEST_MOD" = "$SEEN_MOD" ] && exit 0
-fi
+# Check for unconsumed elements for this session
+RESP=$(curl -s --max-time 1 "http://localhost:7890/elements/latest?session=${SESSION_ID}" 2>/dev/null)
+[ -z "$RESP" ] && exit 0
 
-# Mark as seen
-stat -f %m "$LATEST" 2>/dev/null > "$SEEN" || stat -c %Y "$LATEST" 2>/dev/null > "$SEEN"
+# Check if it's an error (already consumed or no elements)
+echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if 'elements' in d else 1)" 2>/dev/null || exit 0
 
 # Extract summary info
-URL=$(python3 -c "import json,sys; d=json.load(open('$LATEST')); print(d.get('source',{}).get('url','unknown'))" 2>/dev/null || echo "unknown")
-COUNT=$(python3 -c "import json,sys; d=json.load(open('$LATEST')); print(len(d.get('elements',[])))" 2>/dev/null || echo "?")
-SELECTORS=$(python3 -c "
-import json
-d=json.load(open('$LATEST'))
+URL=$(echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('source',{}).get('url','unknown'))" 2>/dev/null || echo "unknown")
+COUNT=$(echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('elements',[])))" 2>/dev/null || echo "?")
+SELECTORS=$(echo "$RESP" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
 for e in d.get('elements',[]):
     print('  - ' + e.get('selector','(no selector)'))
 " 2>/dev/null)
@@ -34,6 +32,5 @@ echo ""
 echo "Full data available at: ${LATEST}"
 echo "Use the Read tool on this file to see complete HTML, attributes, and screenshots."
 
-# Auto-clear server store and latest.json
-curl -s -X DELETE http://localhost:7890/elements >/dev/null 2>&1
-rm -f "$SEEN"
+# Mark as consumed for this session
+curl -s -X POST "http://localhost:7890/elements/consume?session=${SESSION_ID}" >/dev/null 2>&1
