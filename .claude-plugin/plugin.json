@@ -1,0 +1,10 @@
+{
+  "name": "claude-selector",
+  "description": "Select elements on web pages and send their CSS selectors and HTML to Claude Code",
+  "version": "1.0.0",
+  "author": {
+    "name": "krzysiek"
+  },
+  "repository": "https://github.com/krzysiek/claude-selector",
+  "license": "MIT"
+}

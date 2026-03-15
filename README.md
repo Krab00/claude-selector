@@ -1,51 +1,66 @@
 # claude-selector
 
-A Chrome extension + local server that lets you select elements on a web page and send their CSS selectors and HTML to Claude Code.
-
-## Components
-
-- **extension/** — Chrome extension for selecting elements on any page
-- **server/** — Bun HTTP server that receives and stores captured elements
-- **skill/** — Claude Code skill for managing the server and reading data
+A Chrome extension + Claude Code plugin that lets you select elements on a web page and send their CSS selectors and HTML to Claude Code.
 
 ## Installation
 
-### 1. Server
+### 1. Install the Claude Code plugin
 
 ```bash
-cd server
-bun install
+claude plugin add --git https://github.com/user/claude-selector
 ```
 
-### 2. Chrome Extension
+This automatically:
+- Installs the `/ai-service` skill
+- Starts the local server when a Claude Code session begins
+- Stops it when the session ends
 
-1. Open `chrome://extensions` in Chrome
-2. Enable "Developer mode"
-3. Click "Load unpacked" and select the `extension/` directory
+### 2. Install the Chrome Extension
 
-### 3. Claude Code Skill
-
-Symlink or copy the skill file into your Claude Code skills directory:
-
-```bash
-ln -s "$(pwd)/skill/claude-selector.md" ~/.claude/skills/claude-selector.md
-```
+1. Clone this repo (if you haven't already)
+2. Open `chrome://extensions` in Chrome
+3. Enable "Developer mode"
+4. Click "Load unpacked" and select the `extension/` directory
 
 ## Usage
 
-All commands are available as Claude Code slash commands:
+1. Open Claude Code (the server starts automatically)
+2. Open a web page in Chrome and click the extension icon
+3. Toggle selection mode (or press `Cmd+Shift+P` / `Ctrl+Shift+P`)
+4. Click elements to select them (`Cmd/Ctrl+click` for multi-select)
+5. Click "Send" in the extension popup
+6. In Claude Code, run `/ai-service read` to get the captured elements
+
+### Commands
 
 | Command             | Description                          |
 |---------------------|--------------------------------------|
-| `/ai-service on`    | Start the local server               |
-| `/ai-service off`   | Stop the local server                |
-| `/ai-service status`| Check if the server is running       |
 | `/ai-service read`  | Read the latest captured elements    |
+| `/ai-service status`| Check if the server is running       |
+| `/ai-service on`    | Manually start the server            |
+| `/ai-service off`   | Manually stop the server             |
 
-### Workflow
+## Project Structure
 
-1. Start the server: `/ai-service on`
-2. Open a web page in Chrome and use the extension to select elements
-3. Read captured elements in Claude Code: `/ai-service read`
-4. Use the selectors and HTML in your coding tasks
-5. Stop the server when done: `/ai-service off`
+```
+claude-selector/
+├── .claude-plugin/
+│   └── plugin.json          # Plugin manifest
+├── hooks/
+│   └── hooks.json           # Auto-start/stop server hooks
+├── skills/
+│   └── ai-service/
+│       └── SKILL.md         # /ai-service slash command
+├── scripts/
+│   ├── start-server.sh      # Server start script
+│   └── stop-server.sh       # Server stop script
+├── server/                  # Bun HTTP server
+└── extension/               # Chrome extension
+```
+
+## Development
+
+```bash
+cd server && bun install
+claude --plugin-dir .        # Test the plugin locally
+```
