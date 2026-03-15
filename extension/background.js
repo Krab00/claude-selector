@@ -116,17 +116,21 @@ async function handleSendToServer(payload) {
       serverUrl: 'http://localhost:7890',
     });
     const url = `${settings.serverUrl}/elements`;
+    console.log('[Claude Selector] POST', url, payload.elements?.length, 'element(s)');
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     if (!resp.ok) {
+      console.error('[Claude Selector] Server returned', resp.status);
       return { error: `Server returned ${resp.status}` };
     }
     const data = await resp.json();
+    console.log('[Claude Selector] Sent OK:', data);
     return { ok: true, data };
   } catch (err) {
+    console.error('[Claude Selector] Send failed:', err.message);
     return { error: err.message };
   }
 }

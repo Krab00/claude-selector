@@ -3,6 +3,8 @@
   if (window.__claudeSelectorInjected) return;
   window.__claudeSelectorInjected = true;
 
+  const log = (...args) => console.log('[Claude Selector]', ...args);
+
   let selectionMode = false;
   let selectedElements = [];
   let hoveredElement = null;
@@ -38,6 +40,7 @@
 
   function toggleSelectionMode(forceState) {
     selectionMode = forceState !== undefined ? forceState : !selectionMode;
+    log('Selection mode:', selectionMode ? 'ON' : 'OFF');
     if (selectionMode) {
       document.body.classList.add('claude-selector-active');
       document.addEventListener('mouseover', onMouseOver, true);
@@ -128,6 +131,19 @@
     }
   }
 
+  function showToast(msg) {
+    let el = document.querySelector('.claude-selector-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'claude-selector-toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.remove('show');
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => el.classList.remove('show'), 1500);
+  }
+
   async function sendToServer() {
     const data = collectElementData({});
     const payload = {
@@ -135,10 +151,19 @@
       elements: data,
       timestamp: new Date().toISOString(),
     };
+    log('Sending', data.length, 'element(s) to server...');
     try {
-      await chrome.runtime.sendMessage({ type: 'sendToServer', payload });
-    } catch {
-      // server might be offline
+      const resp = await chrome.runtime.sendMessage({ type: 'sendToServer', payload });
+      if (resp?.ok) {
+        log('Sent OK:', resp.data);
+        showToast(`Sent ${data.length} element${data.length !== 1 ? 's' : ''}`);
+      } else {
+        log('Send failed:', resp?.error);
+        showToast('Server offline');
+      }
+    } catch (err) {
+      log('Send error:', err.message);
+      showToast('Server offline');
     }
   }
 
