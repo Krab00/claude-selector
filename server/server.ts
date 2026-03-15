@@ -96,7 +96,7 @@ export class Server {
       }
       if (req.method === "DELETE") {
         await this.store.clear();
-        return json({ ok: true }, 200, origin);
+        return json({ status: "cleared" }, 200, origin);
       }
     }
 

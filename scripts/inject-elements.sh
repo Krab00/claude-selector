@@ -33,3 +33,7 @@ echo "$SELECTORS"
 echo ""
 echo "Full data available at: ${LATEST}"
 echo "Use the Read tool on this file to see complete HTML, attributes, and screenshots."
+
+# Auto-clear server store and latest.json
+curl -s -X DELETE http://localhost:7890/elements >/dev/null 2>&1
+rm -f "$SEEN"

@@ -33,6 +33,11 @@ PID file: `/tmp/claude-selector/server.pid`
    - Any info returned by the health endpoint (e.g. element count, uptime)
 3. If the server does not respond, report: Status: stopped
 
+## `/ai-service clear` — Clear captured elements
+
+1. Run `curl -s -X DELETE http://localhost:7890/elements`
+2. Confirm that elements have been cleared
+
 ## `/ai-service read` — Read latest captured elements
 
 1. Fetch data from `http://localhost:7890/elements/latest` using curl or WebFetch

@@ -9,10 +9,10 @@ if [ -z "$RESP" ]; then
 fi
 
 if command -v jq >/dev/null 2>&1; then
-  echo "$RESP" | jq -r 'if .stored > 0 then "📎 \(.stored) web elements" else "" end'
+  echo "$RESP" | jq -r 'if .stored > 0 then "📎 web elements" else "" end'
 else
   STORED=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stored',0))" 2>/dev/null || echo "0")
   if [ "$STORED" -gt 0 ] 2>/dev/null; then
-    echo "📎 $STORED web elements"
+    echo "📎 web elements"
   fi
 fi
