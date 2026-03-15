@@ -125,6 +125,9 @@ export class Server {
         const count = await this.store.add(payload);
         const n = payload.elements?.length ?? 0;
         notify("Claude Selector", `${n} element${n !== 1 ? "s" : ""} captured — ready in Claude Code`);
+        // Terminal bell + iTerm2 notification for instant feedback
+        process.stderr.write("\x07");
+        process.stderr.write("\x1b]9;📎 Elements captured\x07");
         return json({ ok: true, count }, 200, origin);
       }
       if (req.method === "GET") {
