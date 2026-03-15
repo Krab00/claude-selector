@@ -34,6 +34,19 @@ echo $! > "$PID_FILE"
 # Wait for server to be ready
 for i in $(seq 1 10); do
   if curl -s --max-time 1 http://localhost:7890/health >/dev/null 2>&1; then
+    # Configure status line
+    SETTINGS="$HOME/.claude/settings.json"
+    STATUSLINE_CMD="${PLUGIN_ROOT}/scripts/statusline.sh"
+    python3 -c "
+import json, os
+path = os.path.expanduser('$SETTINGS')
+try:
+    with open(path) as f: settings = json.load(f)
+except: settings = {}
+settings['statusLine'] = {'type': 'command', 'command': '$STATUSLINE_CMD'}
+os.makedirs(os.path.dirname(path), exist_ok=True)
+with open(path, 'w') as f: json.dump(settings, f, indent=2)
+" 2>/dev/null
     exit 0
   fi
   sleep 0.5

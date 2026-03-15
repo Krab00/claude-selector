@@ -10,4 +10,17 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
+# Remove status line config
+SETTINGS="$HOME/.claude/settings.json"
+python3 -c "
+import json, os
+path = os.path.expanduser('$SETTINGS')
+try:
+    with open(path) as f: settings = json.load(f)
+except: exit()
+if 'statusLine' in settings:
+    del settings['statusLine']
+    with open(path, 'w') as f: json.dump(settings, f, indent=2)
+" 2>/dev/null
+
 exit 0
