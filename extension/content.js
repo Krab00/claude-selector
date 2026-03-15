@@ -7,6 +7,28 @@
   let selectedElements = [];
   let hoveredElement = null;
 
+  // Default keybindings (overridden by chrome.storage)
+  let keybindings = {
+    copy: { key: 'c', meta: true },
+    exit: { key: 'Escape', meta: false },
+  };
+
+  // Load custom keybindings
+  chrome.storage.sync.get({ keybindings: null }, (settings) => {
+    if (settings.keybindings) keybindings = settings.keybindings;
+  });
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes.keybindings?.newValue) keybindings = changes.keybindings.newValue;
+  });
+
+  function matchesBinding(e, binding) {
+    if (e.key !== binding.key) return false;
+    if (binding.meta && !(e.metaKey || e.ctrlKey)) return false;
+    if (binding.shift && !e.shiftKey) return false;
+    if (binding.alt && !e.altKey) return false;
+    return true;
+  }
+
   function toggleSelectionMode(forceState) {
     selectionMode = forceState !== undefined ? forceState : !selectionMode;
     if (selectionMode) {
@@ -80,10 +102,41 @@
   }
 
   function onKeyDown(e) {
-    if (e.key === 'Escape') {
+    if (matchesBinding(e, keybindings.exit)) {
       clearSelection();
       toggleSelectionMode(false);
     }
+    if (matchesBinding(e, keybindings.copy) && selectedElements.length > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      copyWithScreenshots();
+    }
+  }
+
+  async function copyWithScreenshots() {
+    const data = collectElementData({});
+    // Capture screenshot for each selected element
+    for (let i = 0; i < selectedElements.length; i++) {
+      const rect = selectedElements[i].getBoundingClientRect();
+      try {
+        const resp = await chrome.runtime.sendMessage({
+          type: 'captureScreenshot',
+          rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+          devicePixelRatio: window.devicePixelRatio,
+        });
+        if (resp?.screenshot) {
+          data[i].screenshot = resp.screenshot;
+        }
+      } catch {
+        // skip screenshot on error
+      }
+    }
+    const payload = {
+      source: { url: location.href, title: document.title },
+      elements: data,
+      timestamp: new Date().toISOString(),
+    };
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
   }
 
   function selectElement(el) {

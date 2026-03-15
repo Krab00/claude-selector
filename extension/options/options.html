@@ -92,6 +92,52 @@
       color: #34c759;
       display: none;
     }
+    .shortcut-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    kbd {
+      display: inline-block;
+      padding: 4px 10px;
+      font-family: SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 1px 0 #bbb;
+    }
+    .shortcut-btn {
+      padding: 4px 12px;
+      font-size: 12px;
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .shortcut-btn:hover { background: #ddd; }
+    .shortcut-hint {
+      font-size: 11px;
+      color: #888;
+      margin-top: 4px;
+    }
+    .key-input {
+      width: 180px;
+      padding: 6px 10px;
+      font-family: SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f9f9f9;
+      cursor: pointer;
+      text-align: center;
+    }
+    .key-input.recording {
+      border-color: #4A90D9;
+      background: #eef4fb;
+      box-shadow: 0 0 0 2px rgba(74,144,217,0.2);
+    }
   </style>
 </head>
 <body>
@@ -147,6 +193,32 @@
       <label for="screenshotQuality">Quality</label>
       <input type="range" id="screenshotQuality" min="0.5" max="1" step="0.05" value="0.8">
       <div class="slider-value" id="qualityValue">0.80</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Keyboard Shortcuts</h2>
+    <div class="field">
+      <label>Toggle Selection Mode</label>
+      <div class="shortcut-row">
+        <kbd id="shortcutDisplay">⌘+Shift+S</kbd>
+        <button class="shortcut-btn" id="changeShortcutBtn">Change in Chrome</button>
+      </div>
+      <div class="shortcut-hint">Chrome manages this shortcut. Click the button to change it.</div>
+    </div>
+    <div class="field">
+      <label>Copy Selected Elements</label>
+      <div class="shortcut-row">
+        <input type="text" id="keyCopy" class="key-input" readonly placeholder="Click to record...">
+        <button class="shortcut-btn" id="recordCopy">Record</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Exit Selection Mode</label>
+      <div class="shortcut-row">
+        <input type="text" id="keyExit" class="key-input" readonly placeholder="Click to record...">
+        <button class="shortcut-btn" id="recordExit">Record</button>
+      </div>
     </div>
   </div>
 

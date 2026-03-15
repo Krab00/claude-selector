@@ -67,4 +67,67 @@ fields.screenshotQuality.addEventListener('input', () => {
 });
 
 saveBtn.addEventListener('click', saveSettings);
+
+document.getElementById('changeShortcutBtn').addEventListener('click', () => {
+  chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+});
+
+// --- Keybinding editor ---
+
+const defaultBindings = {
+  copy: { key: 'c', meta: true, shift: false, alt: false },
+  exit: { key: 'Escape', meta: false, shift: false, alt: false },
+};
+
+let currentBindings = { ...defaultBindings };
+const keyCopyInput = document.getElementById('keyCopy');
+const keyExitInput = document.getElementById('keyExit');
+
+function formatBinding(b) {
+  const parts = [];
+  if (b.meta) parts.push(navigator.platform.includes('Mac') ? '⌘' : 'Ctrl');
+  if (b.shift) parts.push('Shift');
+  if (b.alt) parts.push('Alt');
+  parts.push(b.key === ' ' ? 'Space' : b.key);
+  return parts.join('+');
+}
+
+function loadBindings() {
+  chrome.storage.sync.get({ keybindings: null }, (s) => {
+    if (s.keybindings) currentBindings = s.keybindings;
+    keyCopyInput.value = formatBinding(currentBindings.copy);
+    keyExitInput.value = formatBinding(currentBindings.exit);
+  });
+}
+
+function recordKey(inputEl, bindingName) {
+  inputEl.classList.add('recording');
+  inputEl.value = 'Press keys...';
+
+  function handler(e) {
+    e.preventDefault();
+    // Ignore bare modifier keys
+    if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
+
+    const binding = {
+      key: e.key,
+      meta: e.metaKey || e.ctrlKey,
+      shift: e.shiftKey,
+      alt: e.altKey,
+    };
+    currentBindings[bindingName] = binding;
+    inputEl.value = formatBinding(binding);
+    inputEl.classList.remove('recording');
+    document.removeEventListener('keydown', handler, true);
+
+    chrome.storage.sync.set({ keybindings: currentBindings });
+  }
+
+  document.addEventListener('keydown', handler, true);
+}
+
+document.getElementById('recordCopy').addEventListener('click', () => recordKey(keyCopyInput, 'copy'));
+document.getElementById('recordExit').addEventListener('click', () => recordKey(keyExitInput, 'exit'));
+
+loadBindings();
 loadSettings();
