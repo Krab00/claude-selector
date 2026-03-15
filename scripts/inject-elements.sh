@@ -16,6 +16,20 @@ fi
 # Mark as seen
 stat -f %m "$LATEST" 2>/dev/null > "$SEEN" || stat -c %Y "$LATEST" 2>/dev/null > "$SEEN"
 
-# Output the elements — this gets injected into context
-echo "[Claude Selector] New elements captured from browser:"
-cat "$LATEST"
+# Extract summary info
+URL=$(python3 -c "import json,sys; d=json.load(open('$LATEST')); print(d.get('source',{}).get('url','unknown'))" 2>/dev/null || echo "unknown")
+COUNT=$(python3 -c "import json,sys; d=json.load(open('$LATEST')); print(len(d.get('elements',[])))" 2>/dev/null || echo "?")
+SELECTORS=$(python3 -c "
+import json
+d=json.load(open('$LATEST'))
+for e in d.get('elements',[]):
+    print('  - ' + e.get('selector','(no selector)'))
+" 2>/dev/null)
+
+# Output summary — this gets injected into context
+echo "[Claude Selector] ${COUNT} element(s) captured from: ${URL}"
+echo "Selectors:"
+echo "$SELECTORS"
+echo ""
+echo "Full data available at: ${LATEST}"
+echo "Use the Read tool on this file to see complete HTML, attributes, and screenshots."

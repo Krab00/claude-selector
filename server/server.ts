@@ -1,6 +1,12 @@
 import type { Server as BunServer } from "bun";
 import { Store, type Payload } from "./store";
 
+function notify(title: string, message: string): void {
+  if (process.platform === "darwin") {
+    Bun.spawn(["osascript", "-e", `display notification "${message}" with title "${title}"`]);
+  }
+}
+
 function corsHeaders(origin: string | null): Record<string, string> {
   const allowed =
     origin &&
@@ -81,6 +87,8 @@ export class Server {
       if (req.method === "POST") {
         const payload = (await req.json()) as Payload;
         const count = await this.store.add(payload);
+        const n = payload.elements?.length ?? 0;
+        notify("Claude Selector", `${n} element${n !== 1 ? "s" : ""} captured — ready in Claude Code`);
         return json({ ok: true, count }, 200, origin);
       }
       if (req.method === "GET") {
